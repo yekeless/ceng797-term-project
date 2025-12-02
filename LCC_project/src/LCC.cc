@@ -45,11 +45,8 @@ void LCC::initialize(int stage)
             socket.bind(localPort); // Port 5000'i açtık
             socket.setCallback(this);
 
-            // --- BU KISMI EKLE (Multicast Grubuna Katıl) ---
-            // Node'a diyoruz ki: "224.0.0.1 adresine gelen mektupları da kabul et"
             L3Address mcastAddr = L3AddressResolver().resolve("224.0.0.1");
             socket.joinMulticastGroup(mcastAddr);
-            // -----------------------------------------------
 
             scheduleAt(simTime() + uniform(0, 2), beaconTimer);
             scheduleAt(simTime() + beaconInterval, checkTimeoutTimer);
@@ -58,20 +55,18 @@ void LCC::initialize(int stage)
         }
 }
 
-// --- Lifecycle Fonksiyonları (Compiler Hatası İçin Eklendi) ---
+// --- Lifecycle Fonksiyonları ---
 void LCC::handleStartOperation(LifecycleOperation *operation) {
-    // Başlangıçta özel bir şey yapmamıza gerek yok, initialize hallediyor
+    
 }
 void LCC::handleStopOperation(LifecycleOperation *operation) {
-    // Durdurulunca timerları iptal et
     cancelEvent(beaconTimer);
     cancelEvent(checkTimeoutTimer);
     socket.close();
 }
 void LCC::handleCrashOperation(LifecycleOperation *operation) {
-    // Çökme durumunda yapılacaklar
     if (operation->getRootModule() != getContainingNode(this))
-        socket.destroy(); // Sadece biz değilsek socketi yok et
+        socket.destroy();
 }
 
 void LCC::handleMessageWhenUp(cMessage *msg)
@@ -97,7 +92,7 @@ void LCC::sendBeacon()
     beacon->setSrcId(myId);
     beacon->setRole(static_cast<LccRole>(myRole));
     beacon->setClusterHeadId(myClusterHeadId);
-    beacon->setChunkLength(B(100)); // Pakete sembolik bir boyut verelim
+    beacon->setChunkLength(B(100)); 
 
     packet->insertAtBack(beacon);
 
@@ -105,13 +100,10 @@ void LCC::sendBeacon()
     socket.sendTo(packet, destAddr, destPort);
 }
 
-// İsim düzeltildi: onDataArrived -> socketDataArrived
 void LCC::socketDataArrived(UdpSocket *socket, Packet *packet)
 {
 
-    // ----------------------
-    EV << "Paket ALINDI! Kimden: " << packet->peekAtFront<LccBeacon>()->getSrcId() << endl;
-    // ----------------------
+    
     auto beacon = packet->peekAtFront<LccBeacon>();
     if (!beacon) {
         delete packet;
@@ -158,12 +150,7 @@ void LCC::checkTimeouts()
 
 void LCC::runLCCLogic()
 {
-    // --- DEBUG LOG BAŞLANGICI ---
-    EV << "LCC Mantığı Çalışıyor. ID: " << myId << " Rol: " << myRole << " Komşu Sayısı: " << neighborsRoles.size() << endl;
-    for (auto const& [id, role] : neighborsRoles) {
-        EV << "  -- Komşu ID: " << id << " Rolü: " << role << endl;
-    }
-    // ----------------------------
+    
 
     // 1. UNDECIDED (Kararsız) Durumu
     if (myRole == 0) {
@@ -193,7 +180,6 @@ void LCC::runLCCLogic()
                 if (neighborId < myId) {
                     myRole = 1; // İstifa et
                     myClusterHeadId = neighborId;
-                    EV << "  -> O benden daha kıdemli. İstifa edip Member oluyorum." << endl; // Log
                     break;
                 }
             }
