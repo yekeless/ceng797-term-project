@@ -162,11 +162,9 @@ void LCC::runLCCLogic()
         if (lowestId == myId) {
             myRole = 2; // CH
             myClusterHeadId = myId;
-            EV << "  -> Kendimi CH ilan ettim!" << endl; // Log
         } else {
             myRole = 1; // Member
             myClusterHeadId = lowestId;
-            EV << "  -> " << lowestId << " numaralı node'a üye oldum." << endl; // Log
         }
     }
 
@@ -175,7 +173,6 @@ void LCC::runLCCLogic()
         for (auto const& [neighborId, role] : neighborsRoles) {
             // Eğer komşu da CH ise (Role == 2)
             if (role == 2) {
-                EV << "  -> Rakip CH gördüm! ID: " << neighborId << endl; // Log
 
                 if (neighborId < myId) {
                     myRole = 1; // İstifa et
