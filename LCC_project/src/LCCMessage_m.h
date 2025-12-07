@@ -20,6 +20,7 @@
 namespace inet {
 
 class LccBeacon;
+class LccData;
 
 }  // namespace inet
 
@@ -31,14 +32,13 @@ class LccBeacon;
 namespace inet {
 
 /**
- * Enum generated from <tt>src/LCCMessage.msg:23</tt> by opp_msgtool.
+ * Enum generated from <tt>src/LCCMessage.msg:7</tt> by opp_msgtool.
  * <pre>
- * // Node'un o anki rolü (Durumu)
  * enum LccRole
  * {
- *     UNDECIDED = 0;      // Henüz karar vermedi
- *     CLUSTER_MEMBER = 1; // Bir lidere bağlı üye
- *     CLUSTER_HEAD = 2;   // Lider (Cluster Head)
+ *     UNDECIDED = 0;
+ *     CLUSTER_MEMBER = 1;
+ *     CLUSTER_HEAD = 2;
  * }
  * </pre>
  */
@@ -52,14 +52,14 @@ inline void doParsimPacking(omnetpp::cCommBuffer *b, const LccRole& e) { b->pack
 inline void doParsimUnpacking(omnetpp::cCommBuffer *b, LccRole& e) { int n; b->unpack(n); e = static_cast<LccRole>(n); }
 
 /**
- * Class generated from <tt>src/LCCMessage.msg:30</tt> by opp_msgtool.
+ * Class generated from <tt>src/LCCMessage.msg:14</tt> by opp_msgtool.
  * <pre>
- * // Paket İçeriği (Node'lar bunu birbirine gönderecek)
+ * // 1. Yönetim Paketi (Beacon)
  * class LccBeacon extends FieldsChunk
  * {
- *     int srcId;               // Gönderen Node ID
- *     int role \@enum(LccRole); // Gönderenin Rolü
- *     int clusterHeadId;       // Liderinin ID'si
+ *     int srcId;
+ *     int role \@enum(LccRole);
+ *     int clusterHeadId;
  * }
  * </pre>
  */
@@ -98,6 +98,58 @@ class LccBeacon : public ::inet::FieldsChunk
 inline void doParsimPacking(omnetpp::cCommBuffer *b, const LccBeacon& obj) {obj.parsimPack(b);}
 inline void doParsimUnpacking(omnetpp::cCommBuffer *b, LccBeacon& obj) {obj.parsimUnpack(b);}
 
+/**
+ * Class generated from <tt>src/LCCMessage.msg:21</tt> by opp_msgtool.
+ * <pre>
+ * // 2. Veri Paketi (YENİ - İstatistikler için)
+ * class LccData extends FieldsChunk
+ * {
+ *     int srcId;
+ *     int destId;
+ *     simtime_t sendTime; // Gecikme ölçmek için
+ *     int sequenceNumber;
+ * }
+ * </pre>
+ */
+class LccData : public ::inet::FieldsChunk
+{
+  protected:
+    int srcId = 0;
+    int destId = 0;
+    ::omnetpp::simtime_t sendTime = SIMTIME_ZERO;
+    int sequenceNumber = 0;
+
+  private:
+    void copy(const LccData& other);
+
+  protected:
+    bool operator==(const LccData&) = delete;
+
+  public:
+    LccData();
+    LccData(const LccData& other);
+    virtual ~LccData();
+    LccData& operator=(const LccData& other);
+    virtual LccData *dup() const override {return new LccData(*this);}
+    virtual void parsimPack(omnetpp::cCommBuffer *b) const override;
+    virtual void parsimUnpack(omnetpp::cCommBuffer *b) override;
+
+    virtual int getSrcId() const;
+    virtual void setSrcId(int srcId);
+
+    virtual int getDestId() const;
+    virtual void setDestId(int destId);
+
+    virtual ::omnetpp::simtime_t getSendTime() const;
+    virtual void setSendTime(::omnetpp::simtime_t sendTime);
+
+    virtual int getSequenceNumber() const;
+    virtual void setSequenceNumber(int sequenceNumber);
+};
+
+inline void doParsimPacking(omnetpp::cCommBuffer *b, const LccData& obj) {obj.parsimPack(b);}
+inline void doParsimUnpacking(omnetpp::cCommBuffer *b, LccData& obj) {obj.parsimUnpack(b);}
+
 
 }  // namespace inet
 
@@ -105,6 +157,7 @@ inline void doParsimUnpacking(omnetpp::cCommBuffer *b, LccBeacon& obj) {obj.pars
 namespace omnetpp {
 
 template<> inline inet::LccBeacon *fromAnyPtr(any_ptr ptr) { return check_and_cast<inet::LccBeacon*>(ptr.get<cObject>()); }
+template<> inline inet::LccData *fromAnyPtr(any_ptr ptr) { return check_and_cast<inet::LccData*>(ptr.get<cObject>()); }
 
 }  // namespace omnetpp
 
