@@ -23,20 +23,39 @@ class LCC : public ApplicationBase, public UdpSocket::ICallback
     int myRole; // 0: Undecided, 1: Member, 2: CH
     int myClusterHeadId;
 
-    // --- Komşuluk Tabloları ---
+    bool useMulticast;
+    int numHosts;
+
+    // Gateway
+    bool isGateway = false;
+    std::map<int, int> foreignNeighbors; // Komşu ID -> Onun CH ID
+
+    // Komşuluk Tabloları
     std::map<int, simtime_t> neighborsLastSeen;
     std::map<int, int> neighborsRoles;
 
-    // --- INET Araçları ---
+    // INET Araçları
     UdpSocket socket;
     cMessage *beaconTimer = nullptr;
     cMessage *checkTimeoutTimer = nullptr;
+    cMessage *dataTimer = nullptr; // YENİ: Data göndermek için
 
-    // --- Parametreler ---
+    // Parametreler
     simtime_t beaconInterval;
     simtime_t neighborValidityInterval;
     int localPort;
     int destPort;
+
+    // --- İstatistik Sinyalleri (YENİ) ---
+    simsignal_t chChangeSignal;
+    simsignal_t chLifetimeSignal;
+    simsignal_t controlOverheadSignal;
+    simsignal_t clusterSizeSignal;
+    simsignal_t rttSignal;
+    simsignal_t pdrSignal;
+    simsignal_t dataSentSignal;
+
+    simtime_t chStartTime; // Lifetime hesabı için
 
   protected:
     virtual int numInitStages() const override { return NUM_INIT_STAGES; }
@@ -44,18 +63,20 @@ class LCC : public ApplicationBase, public UdpSocket::ICallback
     virtual void handleMessageWhenUp(cMessage *msg) override;
     virtual void finish() override;
 
-    // --- INET 4.5.4 Uyumlu UDP Callback Fonksiyonları ---
+    // UDP Callback
     virtual void socketDataArrived(UdpSocket *socket, Packet *packet) override;
     virtual void socketClosed(UdpSocket *socket) override {}
     virtual void socketErrorArrived(UdpSocket *socket, Indication *indication) override {}
 
-    // --- Lifecycle (Yaşam Döngüsü) Fonksiyonları ---
+    // Lifecycle
     virtual void handleStartOperation(LifecycleOperation *operation) override;
     virtual void handleStopOperation(LifecycleOperation *operation) override;
     virtual void handleCrashOperation(LifecycleOperation *operation) override;
 
-    // --- LCC Fonksiyonları ---
+    // LCC ve Data Fonksiyonları
     void sendBeacon();
+    void sendDataPacket();
+    void processDataPacket(const Ptr<const LccData>& dataPkt);
     void checkTimeouts();
     void runLCCLogic();
     void updateVisuals();
