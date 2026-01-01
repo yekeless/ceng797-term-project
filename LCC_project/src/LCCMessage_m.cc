@@ -167,6 +167,7 @@ LccBeacon::LccBeacon(const LccBeacon& other) : ::inet::FieldsChunk(other)
 
 LccBeacon::~LccBeacon()
 {
+    delete [] this->seenClusterIds;
 }
 
 LccBeacon& LccBeacon::operator=(const LccBeacon& other)
@@ -182,6 +183,12 @@ void LccBeacon::copy(const LccBeacon& other)
     this->srcId = other.srcId;
     this->role = other.role;
     this->clusterHeadId = other.clusterHeadId;
+    delete [] this->seenClusterIds;
+    this->seenClusterIds = (other.seenClusterIds_arraysize==0) ? nullptr : new int[other.seenClusterIds_arraysize];
+    seenClusterIds_arraysize = other.seenClusterIds_arraysize;
+    for (size_t i = 0; i < seenClusterIds_arraysize; i++) {
+        this->seenClusterIds[i] = other.seenClusterIds[i];
+    }
 }
 
 void LccBeacon::parsimPack(omnetpp::cCommBuffer *b) const
@@ -190,6 +197,8 @@ void LccBeacon::parsimPack(omnetpp::cCommBuffer *b) const
     doParsimPacking(b,this->srcId);
     doParsimPacking(b,this->role);
     doParsimPacking(b,this->clusterHeadId);
+    b->pack(seenClusterIds_arraysize);
+    doParsimArrayPacking(b,this->seenClusterIds,seenClusterIds_arraysize);
 }
 
 void LccBeacon::parsimUnpack(omnetpp::cCommBuffer *b)
@@ -198,6 +207,14 @@ void LccBeacon::parsimUnpack(omnetpp::cCommBuffer *b)
     doParsimUnpacking(b,this->srcId);
     doParsimUnpacking(b,this->role);
     doParsimUnpacking(b,this->clusterHeadId);
+    delete [] this->seenClusterIds;
+    b->unpack(seenClusterIds_arraysize);
+    if (seenClusterIds_arraysize == 0) {
+        this->seenClusterIds = nullptr;
+    } else {
+        this->seenClusterIds = new int[seenClusterIds_arraysize];
+        doParsimArrayUnpacking(b,this->seenClusterIds,seenClusterIds_arraysize);
+    }
 }
 
 int LccBeacon::getSrcId() const
@@ -233,6 +250,76 @@ void LccBeacon::setClusterHeadId(int clusterHeadId)
     this->clusterHeadId = clusterHeadId;
 }
 
+size_t LccBeacon::getSeenClusterIdsArraySize() const
+{
+    return seenClusterIds_arraysize;
+}
+
+int LccBeacon::getSeenClusterIds(size_t k) const
+{
+    if (k >= seenClusterIds_arraysize) throw omnetpp::cRuntimeError("Array of size %lu indexed by %lu", (unsigned long)seenClusterIds_arraysize, (unsigned long)k);
+    return this->seenClusterIds[k];
+}
+
+void LccBeacon::setSeenClusterIdsArraySize(size_t newSize)
+{
+    handleChange();
+    int *seenClusterIds2 = (newSize==0) ? nullptr : new int[newSize];
+    size_t minSize = seenClusterIds_arraysize < newSize ? seenClusterIds_arraysize : newSize;
+    for (size_t i = 0; i < minSize; i++)
+        seenClusterIds2[i] = this->seenClusterIds[i];
+    for (size_t i = minSize; i < newSize; i++)
+        seenClusterIds2[i] = 0;
+    delete [] this->seenClusterIds;
+    this->seenClusterIds = seenClusterIds2;
+    seenClusterIds_arraysize = newSize;
+}
+
+void LccBeacon::setSeenClusterIds(size_t k, int seenClusterIds)
+{
+    if (k >= seenClusterIds_arraysize) throw omnetpp::cRuntimeError("Array of size %lu indexed by %lu", (unsigned long)seenClusterIds_arraysize, (unsigned long)k);
+    handleChange();
+    this->seenClusterIds[k] = seenClusterIds;
+}
+
+void LccBeacon::insertSeenClusterIds(size_t k, int seenClusterIds)
+{
+    if (k > seenClusterIds_arraysize) throw omnetpp::cRuntimeError("Array of size %lu indexed by %lu", (unsigned long)seenClusterIds_arraysize, (unsigned long)k);
+    handleChange();
+    size_t newSize = seenClusterIds_arraysize + 1;
+    int *seenClusterIds2 = new int[newSize];
+    size_t i;
+    for (i = 0; i < k; i++)
+        seenClusterIds2[i] = this->seenClusterIds[i];
+    seenClusterIds2[k] = seenClusterIds;
+    for (i = k + 1; i < newSize; i++)
+        seenClusterIds2[i] = this->seenClusterIds[i-1];
+    delete [] this->seenClusterIds;
+    this->seenClusterIds = seenClusterIds2;
+    seenClusterIds_arraysize = newSize;
+}
+
+void LccBeacon::appendSeenClusterIds(int seenClusterIds)
+{
+    insertSeenClusterIds(seenClusterIds_arraysize, seenClusterIds);
+}
+
+void LccBeacon::eraseSeenClusterIds(size_t k)
+{
+    if (k >= seenClusterIds_arraysize) throw omnetpp::cRuntimeError("Array of size %lu indexed by %lu", (unsigned long)seenClusterIds_arraysize, (unsigned long)k);
+    handleChange();
+    size_t newSize = seenClusterIds_arraysize - 1;
+    int *seenClusterIds2 = (newSize == 0) ? nullptr : new int[newSize];
+    size_t i;
+    for (i = 0; i < k; i++)
+        seenClusterIds2[i] = this->seenClusterIds[i];
+    for (i = k; i < newSize; i++)
+        seenClusterIds2[i] = this->seenClusterIds[i+1];
+    delete [] this->seenClusterIds;
+    this->seenClusterIds = seenClusterIds2;
+    seenClusterIds_arraysize = newSize;
+}
+
 class LccBeaconDescriptor : public omnetpp::cClassDescriptor
 {
   private:
@@ -241,6 +328,7 @@ class LccBeaconDescriptor : public omnetpp::cClassDescriptor
         FIELD_srcId,
         FIELD_role,
         FIELD_clusterHeadId,
+        FIELD_seenClusterIds,
     };
   public:
     LccBeaconDescriptor();
@@ -307,7 +395,7 @@ const char *LccBeaconDescriptor::getProperty(const char *propertyName) const
 int LccBeaconDescriptor::getFieldCount() const
 {
     omnetpp::cClassDescriptor *base = getBaseClassDescriptor();
-    return base ? 3+base->getFieldCount() : 3;
+    return base ? 4+base->getFieldCount() : 4;
 }
 
 unsigned int LccBeaconDescriptor::getFieldTypeFlags(int field) const
@@ -322,8 +410,9 @@ unsigned int LccBeaconDescriptor::getFieldTypeFlags(int field) const
         FD_ISEDITABLE,    // FIELD_srcId
         FD_ISEDITABLE,    // FIELD_role
         FD_ISEDITABLE,    // FIELD_clusterHeadId
+        FD_ISARRAY | FD_ISEDITABLE | FD_ISRESIZABLE,    // FIELD_seenClusterIds
     };
-    return (field >= 0 && field < 3) ? fieldTypeFlags[field] : 0;
+    return (field >= 0 && field < 4) ? fieldTypeFlags[field] : 0;
 }
 
 const char *LccBeaconDescriptor::getFieldName(int field) const
@@ -338,8 +427,9 @@ const char *LccBeaconDescriptor::getFieldName(int field) const
         "srcId",
         "role",
         "clusterHeadId",
+        "seenClusterIds",
     };
-    return (field >= 0 && field < 3) ? fieldNames[field] : nullptr;
+    return (field >= 0 && field < 4) ? fieldNames[field] : nullptr;
 }
 
 int LccBeaconDescriptor::findField(const char *fieldName) const
@@ -349,6 +439,7 @@ int LccBeaconDescriptor::findField(const char *fieldName) const
     if (strcmp(fieldName, "srcId") == 0) return baseIndex + 0;
     if (strcmp(fieldName, "role") == 0) return baseIndex + 1;
     if (strcmp(fieldName, "clusterHeadId") == 0) return baseIndex + 2;
+    if (strcmp(fieldName, "seenClusterIds") == 0) return baseIndex + 3;
     return base ? base->findField(fieldName) : -1;
 }
 
@@ -364,8 +455,9 @@ const char *LccBeaconDescriptor::getFieldTypeString(int field) const
         "int",    // FIELD_srcId
         "int",    // FIELD_role
         "int",    // FIELD_clusterHeadId
+        "int",    // FIELD_seenClusterIds
     };
-    return (field >= 0 && field < 3) ? fieldTypeStrings[field] : nullptr;
+    return (field >= 0 && field < 4) ? fieldTypeStrings[field] : nullptr;
 }
 
 const char **LccBeaconDescriptor::getFieldPropertyNames(int field) const
@@ -377,10 +469,6 @@ const char **LccBeaconDescriptor::getFieldPropertyNames(int field) const
         field -= base->getFieldCount();
     }
     switch (field) {
-        case FIELD_role: {
-            static const char *names[] = { "enum", "enum",  nullptr };
-            return names;
-        }
         default: return nullptr;
     }
 }
@@ -394,10 +482,6 @@ const char *LccBeaconDescriptor::getFieldProperty(int field, const char *propert
         field -= base->getFieldCount();
     }
     switch (field) {
-        case FIELD_role:
-            if (!strcmp(propertyName, "enum")) return "LccRole";
-            if (!strcmp(propertyName, "enum")) return "inet::LccRole";
-            return nullptr;
         default: return nullptr;
     }
 }
@@ -412,6 +496,7 @@ int LccBeaconDescriptor::getFieldArraySize(omnetpp::any_ptr object, int field) c
     }
     LccBeacon *pp = omnetpp::fromAnyPtr<LccBeacon>(object); (void)pp;
     switch (field) {
+        case FIELD_seenClusterIds: return pp->getSeenClusterIdsArraySize();
         default: return 0;
     }
 }
@@ -428,6 +513,7 @@ void LccBeaconDescriptor::setFieldArraySize(omnetpp::any_ptr object, int field, 
     }
     LccBeacon *pp = omnetpp::fromAnyPtr<LccBeacon>(object); (void)pp;
     switch (field) {
+        case FIELD_seenClusterIds: pp->setSeenClusterIdsArraySize(size); break;
         default: throw omnetpp::cRuntimeError("Cannot set array size of field %d of class 'LccBeacon'", field);
     }
 }
@@ -457,8 +543,9 @@ std::string LccBeaconDescriptor::getFieldValueAsString(omnetpp::any_ptr object, 
     LccBeacon *pp = omnetpp::fromAnyPtr<LccBeacon>(object); (void)pp;
     switch (field) {
         case FIELD_srcId: return long2string(pp->getSrcId());
-        case FIELD_role: return enum2string(pp->getRole(), "inet::LccRole");
+        case FIELD_role: return long2string(pp->getRole());
         case FIELD_clusterHeadId: return long2string(pp->getClusterHeadId());
+        case FIELD_seenClusterIds: return long2string(pp->getSeenClusterIds(i));
         default: return "";
     }
 }
@@ -476,8 +563,9 @@ void LccBeaconDescriptor::setFieldValueAsString(omnetpp::any_ptr object, int fie
     LccBeacon *pp = omnetpp::fromAnyPtr<LccBeacon>(object); (void)pp;
     switch (field) {
         case FIELD_srcId: pp->setSrcId(string2long(value)); break;
-        case FIELD_role: pp->setRole((inet::LccRole)string2enum(value, "inet::LccRole")); break;
+        case FIELD_role: pp->setRole(string2long(value)); break;
         case FIELD_clusterHeadId: pp->setClusterHeadId(string2long(value)); break;
+        case FIELD_seenClusterIds: pp->setSeenClusterIds(i,string2long(value)); break;
         default: throw omnetpp::cRuntimeError("Cannot set field %d of class 'LccBeacon'", field);
     }
 }
@@ -495,6 +583,7 @@ omnetpp::cValue LccBeaconDescriptor::getFieldValue(omnetpp::any_ptr object, int 
         case FIELD_srcId: return pp->getSrcId();
         case FIELD_role: return pp->getRole();
         case FIELD_clusterHeadId: return pp->getClusterHeadId();
+        case FIELD_seenClusterIds: return pp->getSeenClusterIds(i);
         default: throw omnetpp::cRuntimeError("Cannot return field %d of class 'LccBeacon' as cValue -- field index out of range?", field);
     }
 }
@@ -512,8 +601,9 @@ void LccBeaconDescriptor::setFieldValue(omnetpp::any_ptr object, int field, int 
     LccBeacon *pp = omnetpp::fromAnyPtr<LccBeacon>(object); (void)pp;
     switch (field) {
         case FIELD_srcId: pp->setSrcId(omnetpp::checked_int_cast<int>(value.intValue())); break;
-        case FIELD_role: pp->setRole((inet::LccRole)value.intValue()); break;
+        case FIELD_role: pp->setRole(omnetpp::checked_int_cast<int>(value.intValue())); break;
         case FIELD_clusterHeadId: pp->setClusterHeadId(omnetpp::checked_int_cast<int>(value.intValue())); break;
+        case FIELD_seenClusterIds: pp->setSeenClusterIds(i,omnetpp::checked_int_cast<int>(value.intValue())); break;
         default: throw omnetpp::cRuntimeError("Cannot set field %d of class 'LccBeacon'", field);
     }
 }
@@ -589,7 +679,7 @@ void LccData::copy(const LccData& other)
     this->srcId = other.srcId;
     this->destId = other.destId;
     this->sendTime = other.sendTime;
-    this->sequenceNumber = other.sequenceNumber;
+    this->seqNo = other.seqNo;
 }
 
 void LccData::parsimPack(omnetpp::cCommBuffer *b) const
@@ -598,7 +688,7 @@ void LccData::parsimPack(omnetpp::cCommBuffer *b) const
     doParsimPacking(b,this->srcId);
     doParsimPacking(b,this->destId);
     doParsimPacking(b,this->sendTime);
-    doParsimPacking(b,this->sequenceNumber);
+    doParsimPacking(b,this->seqNo);
 }
 
 void LccData::parsimUnpack(omnetpp::cCommBuffer *b)
@@ -607,7 +697,7 @@ void LccData::parsimUnpack(omnetpp::cCommBuffer *b)
     doParsimUnpacking(b,this->srcId);
     doParsimUnpacking(b,this->destId);
     doParsimUnpacking(b,this->sendTime);
-    doParsimUnpacking(b,this->sequenceNumber);
+    doParsimUnpacking(b,this->seqNo);
 }
 
 int LccData::getSrcId() const
@@ -643,15 +733,15 @@ void LccData::setSendTime(::omnetpp::simtime_t sendTime)
     this->sendTime = sendTime;
 }
 
-int LccData::getSequenceNumber() const
+int LccData::getSeqNo() const
 {
-    return this->sequenceNumber;
+    return this->seqNo;
 }
 
-void LccData::setSequenceNumber(int sequenceNumber)
+void LccData::setSeqNo(int seqNo)
 {
     handleChange();
-    this->sequenceNumber = sequenceNumber;
+    this->seqNo = seqNo;
 }
 
 class LccDataDescriptor : public omnetpp::cClassDescriptor
@@ -662,7 +752,7 @@ class LccDataDescriptor : public omnetpp::cClassDescriptor
         FIELD_srcId,
         FIELD_destId,
         FIELD_sendTime,
-        FIELD_sequenceNumber,
+        FIELD_seqNo,
     };
   public:
     LccDataDescriptor();
@@ -744,7 +834,7 @@ unsigned int LccDataDescriptor::getFieldTypeFlags(int field) const
         FD_ISEDITABLE,    // FIELD_srcId
         FD_ISEDITABLE,    // FIELD_destId
         FD_ISEDITABLE,    // FIELD_sendTime
-        FD_ISEDITABLE,    // FIELD_sequenceNumber
+        FD_ISEDITABLE,    // FIELD_seqNo
     };
     return (field >= 0 && field < 4) ? fieldTypeFlags[field] : 0;
 }
@@ -761,7 +851,7 @@ const char *LccDataDescriptor::getFieldName(int field) const
         "srcId",
         "destId",
         "sendTime",
-        "sequenceNumber",
+        "seqNo",
     };
     return (field >= 0 && field < 4) ? fieldNames[field] : nullptr;
 }
@@ -773,7 +863,7 @@ int LccDataDescriptor::findField(const char *fieldName) const
     if (strcmp(fieldName, "srcId") == 0) return baseIndex + 0;
     if (strcmp(fieldName, "destId") == 0) return baseIndex + 1;
     if (strcmp(fieldName, "sendTime") == 0) return baseIndex + 2;
-    if (strcmp(fieldName, "sequenceNumber") == 0) return baseIndex + 3;
+    if (strcmp(fieldName, "seqNo") == 0) return baseIndex + 3;
     return base ? base->findField(fieldName) : -1;
 }
 
@@ -789,7 +879,7 @@ const char *LccDataDescriptor::getFieldTypeString(int field) const
         "int",    // FIELD_srcId
         "int",    // FIELD_destId
         "omnetpp::simtime_t",    // FIELD_sendTime
-        "int",    // FIELD_sequenceNumber
+        "int",    // FIELD_seqNo
     };
     return (field >= 0 && field < 4) ? fieldTypeStrings[field] : nullptr;
 }
@@ -877,7 +967,7 @@ std::string LccDataDescriptor::getFieldValueAsString(omnetpp::any_ptr object, in
         case FIELD_srcId: return long2string(pp->getSrcId());
         case FIELD_destId: return long2string(pp->getDestId());
         case FIELD_sendTime: return simtime2string(pp->getSendTime());
-        case FIELD_sequenceNumber: return long2string(pp->getSequenceNumber());
+        case FIELD_seqNo: return long2string(pp->getSeqNo());
         default: return "";
     }
 }
@@ -897,7 +987,7 @@ void LccDataDescriptor::setFieldValueAsString(omnetpp::any_ptr object, int field
         case FIELD_srcId: pp->setSrcId(string2long(value)); break;
         case FIELD_destId: pp->setDestId(string2long(value)); break;
         case FIELD_sendTime: pp->setSendTime(string2simtime(value)); break;
-        case FIELD_sequenceNumber: pp->setSequenceNumber(string2long(value)); break;
+        case FIELD_seqNo: pp->setSeqNo(string2long(value)); break;
         default: throw omnetpp::cRuntimeError("Cannot set field %d of class 'LccData'", field);
     }
 }
@@ -915,7 +1005,7 @@ omnetpp::cValue LccDataDescriptor::getFieldValue(omnetpp::any_ptr object, int fi
         case FIELD_srcId: return pp->getSrcId();
         case FIELD_destId: return pp->getDestId();
         case FIELD_sendTime: return pp->getSendTime().dbl();
-        case FIELD_sequenceNumber: return pp->getSequenceNumber();
+        case FIELD_seqNo: return pp->getSeqNo();
         default: throw omnetpp::cRuntimeError("Cannot return field %d of class 'LccData' as cValue -- field index out of range?", field);
     }
 }
@@ -935,7 +1025,7 @@ void LccDataDescriptor::setFieldValue(omnetpp::any_ptr object, int field, int i,
         case FIELD_srcId: pp->setSrcId(omnetpp::checked_int_cast<int>(value.intValue())); break;
         case FIELD_destId: pp->setDestId(omnetpp::checked_int_cast<int>(value.intValue())); break;
         case FIELD_sendTime: pp->setSendTime(value.doubleValue()); break;
-        case FIELD_sequenceNumber: pp->setSequenceNumber(omnetpp::checked_int_cast<int>(value.intValue())); break;
+        case FIELD_seqNo: pp->setSeqNo(omnetpp::checked_int_cast<int>(value.intValue())); break;
         default: throw omnetpp::cRuntimeError("Cannot set field %d of class 'LccData'", field);
     }
 }
