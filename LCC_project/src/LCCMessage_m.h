@@ -54,12 +54,12 @@ inline void doParsimUnpacking(omnetpp::cCommBuffer *b, LccRole& e) { int n; b->u
 /**
  * Class generated from <tt>src/LCCMessage.msg:14</tt> by opp_msgtool.
  * <pre>
- * // 1. Yönetim Paketi (Beacon)
  * class LccBeacon extends FieldsChunk
  * {
  *     int srcId;
- *     int role \@enum(LccRole);
+ *     int role;
  *     int clusterHeadId;
+ *     int seenClusterIds[];
  * }
  * </pre>
  */
@@ -69,6 +69,8 @@ class LccBeacon : public ::inet::FieldsChunk
     int srcId = 0;
     int role = 0;
     int clusterHeadId = 0;
+    int *seenClusterIds = nullptr;
+    size_t seenClusterIds_arraysize = 0;
 
   private:
     void copy(const LccBeacon& other);
@@ -93,6 +95,15 @@ class LccBeacon : public ::inet::FieldsChunk
 
     virtual int getClusterHeadId() const;
     virtual void setClusterHeadId(int clusterHeadId);
+
+    virtual void setSeenClusterIdsArraySize(size_t size);
+    virtual size_t getSeenClusterIdsArraySize() const;
+    virtual int getSeenClusterIds(size_t k) const;
+    virtual void setSeenClusterIds(size_t k, int seenClusterIds);
+    virtual void insertSeenClusterIds(size_t k, int seenClusterIds);
+    [[deprecated]] void insertSeenClusterIds(int seenClusterIds) {appendSeenClusterIds(seenClusterIds);}
+    virtual void appendSeenClusterIds(int seenClusterIds);
+    virtual void eraseSeenClusterIds(size_t k);
 };
 
 inline void doParsimPacking(omnetpp::cCommBuffer *b, const LccBeacon& obj) {obj.parsimPack(b);}
@@ -101,13 +112,12 @@ inline void doParsimUnpacking(omnetpp::cCommBuffer *b, LccBeacon& obj) {obj.pars
 /**
  * Class generated from <tt>src/LCCMessage.msg:21</tt> by opp_msgtool.
  * <pre>
- * // 2. Veri Paketi (YENİ - İstatistikler için)
  * class LccData extends FieldsChunk
  * {
  *     int srcId;
  *     int destId;
- *     simtime_t sendTime; // Gecikme ölçmek için
- *     int sequenceNumber;
+ *     simtime_t sendTime;
+ *     int seqNo;
  * }
  * </pre>
  */
@@ -117,7 +127,7 @@ class LccData : public ::inet::FieldsChunk
     int srcId = 0;
     int destId = 0;
     ::omnetpp::simtime_t sendTime = SIMTIME_ZERO;
-    int sequenceNumber = 0;
+    int seqNo = 0;
 
   private:
     void copy(const LccData& other);
@@ -143,8 +153,8 @@ class LccData : public ::inet::FieldsChunk
     virtual ::omnetpp::simtime_t getSendTime() const;
     virtual void setSendTime(::omnetpp::simtime_t sendTime);
 
-    virtual int getSequenceNumber() const;
-    virtual void setSequenceNumber(int sequenceNumber);
+    virtual int getSeqNo() const;
+    virtual void setSeqNo(int seqNo);
 };
 
 inline void doParsimPacking(omnetpp::cCommBuffer *b, const LccData& obj) {obj.parsimPack(b);}
