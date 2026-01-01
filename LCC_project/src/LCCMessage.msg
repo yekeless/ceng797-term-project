@@ -10,17 +10,17 @@ enum LccRole {
     CLUSTER_HEAD = 2;
 };
 
-// 1. Yönetim Paketi (Beacon)
+
 class LccBeacon extends FieldsChunk {
     int srcId;
-    int role @enum(LccRole);
+    int role;
     int clusterHeadId;
+    int seenClusterIds[];
 }
 
-// 2. Veri Paketi (YENİ - İstatistikler için)
 class LccData extends FieldsChunk {
     int srcId;
     int destId;
-    simtime_t sendTime; // Gecikme ölçmek için
-    int sequenceNumber;
+    simtime_t sendTime;
+    int seqNo; 
 }
