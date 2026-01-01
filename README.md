@@ -8,9 +8,9 @@ The full academic report detailing the methodology, mathematical models, and dis
 ## System Requirements and Dependencies
 The simulation framework relies on the following software versions. Compatibility with older versions is not guaranteed.
 
-* **Operating System:** Ubuntu 22.04 LTS (Tested) / Windows 10/11
-* **Discrete Event Simulator:** OMNeT++ v6.0.3 (or later)
-* **Network Framework:** INET Framework v4.5.2
+* **Operating System:** Ubuntu 25.10 LTS (Tested)
+* **Discrete Event Simulator:** OMNeT++ v6.2.0 (or later)
+* **Network Framework:** INET Framework v4.5.4
 * **Compiler:** GCC v11.4.0 (Linux) / MinGW (Windows)
 * **Data Analysis:** Python 3.10+
     * `pandas` v2.0.0
